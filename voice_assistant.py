@@ -1,3 +1,6 @@
+
+
+
 import streamlit as st
 
 st.set_page_config( page_title = "Voice Assistant", layout = "wide")
@@ -10,22 +13,18 @@ import speech_recognition as sr
 from groq import Groq
 from dotenv import load_dotenv
 
-# $env:chintala_api_key="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"
 
-# loading the API key from local enviornment for safty purpose
-load_dotenv()
-chintala_api_key="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"
-
-if not chintala_api_key:
+load_dotenv(override=True)
+Api_key = os.getenv("GROQ_API_KEY")
+if not Api_key:
     st.error("Missing API key in ENV")
     st.stop()
 
 # Client to connect with Groq cloud
-client = Groq(api_key=chintala_api_key)
-MODEL = "llama-3.3-70b-versatile"
+client = Groq(api_key = Api_key)
+MODEL = "openai/gpt-oss-120b"
 
 # initializing speech recognizer
-@st.cache_resource
 def get_recognizer():
     return sr.Recognizer()
 
@@ -41,27 +40,21 @@ def get_tts_engine():
         return None
     
 # function for speak
-def speak(text, voice_gender = "boy"):
+def speak(text, voice_gender):
     try:
         engine = get_tts_engine()
         if engine is None:
             return
-        
+
         voices = engine.getProperty("voices")
         if voices:
             if voice_gender == "boy":
-                for voice in voices:
-                    if "male" in voice.name.lower():
-                        engine.setProperty("voice", voice.id)
-                        break
+                engine.setProperty("voice", voices[0].id)  # David
             else:
-                for voice in voices:
-                    if "female" in voice.name.lower():
-                        engine.setProperty("voice", voice.id)
-                        break
-            
-        engine.setProperty('rate', 200)
-        engine.setProperty('volumn', 0.8)
+                engine.setProperty("voice", voices[1].id)  # Zira
+
+        engine.setProperty('rate', 150)
+        engine.setProperty('volume', 1)
         engine.say(text)
         engine.runAndWait()
         engine.stop()
@@ -105,7 +98,7 @@ def main():
 
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = [
-            {"role": "system", "content": "Reply like matthew mcconaughey from True detective"}
+            {"role": "system", "content": "Reply like matthew mcconaughey from True detective and give answers in two lines"}
             ]
 
     # Here We are creating streamlit session message list
@@ -129,14 +122,14 @@ def main():
             user_input = listen_to_speech()
 
             if user_input and user_input not in [ "Sorry, I don't Catch You", "Speech service not available" ]:
-                st.session_state.messages.append({"role": "user", "content" : user_input })
-                st.session_state.chat_history.append({"role" : "user", "content": user_input })
+                st.session_state.messages.append({"role": "assistant", "content" : user_input })
+                st.session_state.chat_history.append({"role" : "assistant", "content": user_input })
 
                 # get AI reply
                 with st.spinner("Thninking..."):
                     ai_response = get_ai_response(st.session_state.chat_history)
-                    st.session_state.messages.append({"role": "user", "content" : ai_response })  # to pass conversation to LLM
-                    st.session_state.chat_history.append({"role" : "user", "content": ai_response }) # for display data on screen
+                    st.session_state.messages.append({"role": "assistant", "content" : ai_response })  # to pass conversation to LLM
+                    st.session_state.chat_history.append({"role" : "assistant", "content": ai_response }) # for display data on screen
 
                 # speak the reply if enbled
                 if tts_enabled:
@@ -150,14 +143,14 @@ def main():
         user_text = st.text_input("Type your Message")
 
         if st.button("Send", type = "secondary", use_container_width=True) and user_text:
-            st.session_state.messages.append({"role": "user", "content" : user_text })
-            st.session_state.chat_history.append({"role" : "user", "content": user_text })
+            st.session_state.messages.append({"role": "assistant", "content" : user_text })
+            st.session_state.chat_history.append({"role" : "assistant", "content": user_text })
 
             # get AI reply
-            with st.spinner("Thninking..."):
+            with st.spinner("Thinking..."):
                 ai_response = get_ai_response(st.session_state.chat_history)
-                st.session_state.messages.append({"role": "user", "content" : ai_response })  # to pass conversation to LLM
-                st.session_state.chat_history.append({"role" : "user", "content": ai_response })
+                st.session_state.messages.append({"role": "assistant", "content" : ai_response })  # to pass conversation to LLM
+                st.session_state.chat_history.append({"role" : "assistant", "content": ai_response })
 
             # speak the reply if enbled
             if tts_enabled:
@@ -171,7 +164,7 @@ def main():
         if st.button("Clear Chat", use_container_width=True):
             st.session_state.messages = []
             st.session_state.chat_history = [
-                            {"role": "system", "content": "Reply like Brahmanandam, south indian hero. Reply only one line"}
+                            {"role": "system", "content": "Reply like matthew mcconaughey from True detective and give answers in two lines"}
                         ]
             st.rerun()
 

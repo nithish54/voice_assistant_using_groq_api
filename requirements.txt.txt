@@ -1,7 +1,0 @@
-streamlit
-pyttsx3
-speechrecognition
-pyaudio
-groq
-gTTS
-
